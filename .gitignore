@@ -1,14 +1,49 @@
-# Fichiers et dossiers à ignorer
+# Fichiers Python compilés et cache
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environnement virtuel Python
+llm_env/
+venv/
+env/
+
+# IDE & éditeurs
 .vscode/
 .idea/
-*.pyc
+.cache/
+
+# Logs
 *.log
-agents/__pycache__/
-api/__pycache__/
-docker/__pycache__/
-models/__pycache__/
-data/__pycache__/
-scripts/__pycache__/
-tests/__pycache__/
-llm_env/
+
+# Fichiers temporaires et de sauvegarde
+*.bak
+*.swp
+*~
+*.tmp
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar
+*.tar.gz
+*.tgz
+*.dockerignore
+
+# Fichiers sensibles
+*.env
+
+# Données et base vectorielle
+data/
+data/*
+
+# Modèles LLM volumineux et cache Ollama
+models/
+*.gguf
+*.bin
+*.pth
+*.pt
+.ollama/
