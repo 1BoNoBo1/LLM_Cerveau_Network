@@ -187,7 +187,7 @@ else
     fi
 fi
 
-# |||||||||||||||||||||||||||||||||--- Installation Ollama ---|||||||||||||||||||||||||||||||
+# |||||||||||||||||||||||||||||||||--- Installation ollama ---|||||||||||||||||||||||||||||||
 etape "Installation d'Ollama (Gestionnaire des modèles LLM quantifiés)"
 if commande_existe ollama; then
     succes "Ollama déjà installé"
@@ -200,6 +200,31 @@ else
         exit 1
     fi
 fi
+
+telecharger_modele() {
+    local modele=$1
+    local version=$2
+    etape "Téléchargement du modèle $modele $version"
+    if commande_existe ollama; then
+        if ollama list | grep -q "$modele:$version"; then
+            succes "Modèle $modele $version déjà présent"
+        else
+            if ollama pull $modele:$version; then
+                succes "Modèle $modele $version téléchargé avec succès"
+            else
+                erreur "Échec du téléchargement du modèle $modele $version"
+            fi
+        fi
+    else
+        erreur "Ollama n'est pas installé. Impossible de télécharger le modèle $modele $version"
+        exit 1
+    fi
+}
+
+telecharger_modele "gemma" "2b"
+telecharger_modele "phi"
+
+
 
 
 etape "Tous les prérequis sont satisfaits. Prêt à continuer l'installation!"
@@ -252,6 +277,10 @@ if [ -f "../requirements.txt" ]; then
 else
         avertissement "Fichier requirements.txt non trouvé. Aucune dépendance à installer."
 fi
+
+# lister les packages installés
+etape "Liste des packages installés"
+pip list
 
 # Désactiver l'environnement virtuel
 deactivate
