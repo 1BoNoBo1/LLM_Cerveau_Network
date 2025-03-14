@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+autogen
+chromadb
+ollama
+streamlit
+pydantic
+requests
+numpy
+pandas

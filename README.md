@@ -1,4 +1,4 @@
-# 🧠 LLM Brain Network
+# 🧠 LLM Cerveau Network
 
 **Un cerveau collaboratif composé d'agents spécialisés utilisant plusieurs modèles LLM quantifiés, échangeant et raisonnant ensemble via AutoGen et Ollama.**
 
@@ -100,4 +100,3 @@ Toute contribution est bienvenue ! Suivez ces étapes :
 
 ## 📚 Licence
 Ce projet est sous licence MIT. Libre d'être partagé, modifié, utilisé pour l’éducation et la communauté.
-
