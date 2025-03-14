@@ -18,17 +18,17 @@ echo "================================================"
 
 # Fonction pour vérifier si une commande existe
 commande_existe() {
-    command -v "$1" >/dev/null 2>&1
+        command -v "$1" >/dev/null 2>&1
 }
 
 # Fonction pour vérifier si un package est installé
 package_existe() {
-    dpkg -s "$1" &>/dev/null
+        dpkg -s "$1" &>/dev/null
 }
 
 # Fonction pour afficher les messages d'étape
 etape() {
-        echo -e "\n${BLEU}[*] $1${NC}"
+        echo -e "${BLEU}\\n===> $1${NC}\\n"
 }
 
 # Fonction pour afficher les messages de succès
@@ -187,6 +187,19 @@ else
     fi
 fi
 
+# |||||||||||||||||||||||||||||||||--- Installation Ollama ---|||||||||||||||||||||||||||||||
+etape "Installation d'Ollama (Gestionnaire des modèles LLM quantifiés)"
+if commande_existe ollama; then
+    succes "Ollama déjà installé"
+else
+    curl -fsSL https://ollama.com/install.sh | sh
+    if commande_existe ollama; then
+        succes "Ollama installé avec succès"
+    else
+        erreur "Échec installation Ollama"
+        exit 1
+    fi
+fi
 
 
 etape "Tous les prérequis sont satisfaits. Prêt à continuer l'installation!"
@@ -221,7 +234,7 @@ source "$VENV_DIR/bin/activate"
 etape "Mise à jour de pip"
 pip install --upgrade pip
 if [ $? -eq 0 ]; then
-        succes "pip mis à jour avec succès"
+        succes " mis à jour avec succès"
 else
         erreur "Échec de la mise à jour de pip"
         exit 1
@@ -240,20 +253,11 @@ else
         avertissement "Fichier requirements.txt non trouvé. Aucune dépendance à installer."
 fi
 
-
-
-
 # Désactiver l'environnement virtuel
 deactivate
 succes "Environnement Python configuré et prêt à l'emploi"
 
 etape "Instructions d'utilisation:"
-echo -e "Pour activer l'environnement virtuel: ${VERT}source llm_env/bin/activate${NC}"
+echo -e "Pour activer l'environnement virtuel qui est $VENV_DIR: ${VERT}source llm_env/bin/activate${NC}"
 echo -e "Pour quitter l'environnement virtuel: ${VERT}deactivate${NC}"
-
-
-
-
-
-
 exit 0
