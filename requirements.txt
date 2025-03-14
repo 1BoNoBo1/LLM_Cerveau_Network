@@ -1,10 +1,17 @@
-fastapi
-uvicorn[standard]
-autogen
-chromadb
-ollama
-streamlit
-pydantic
-requests
-numpy
-pandas
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+
+chromadb==0.4.24
+openai==1.13.3
+pyautogen==0.2.26
+
+python-dotenv==1.0.1
+pydantic==2.6.4
+PyYAML==6.0.1
+
+numpy==1.26.4
+pandas==2.2.1
+
+streamlit==1.32.2  # facultatif, mais recommandé pour intégration future
+httpx==0.27.0        # pour tests unitaires FastAPI
+pytest==8.1.1
