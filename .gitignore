@@ -4,6 +4,9 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Ignorer les fichiers ZIP
+*.zip
+
 # Environnement virtuel Python
 llm_env/
 venv/
