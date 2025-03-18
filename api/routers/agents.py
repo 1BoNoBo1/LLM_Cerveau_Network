@@ -20,21 +20,21 @@ config_list = [
     },
     {
         "base_url": "http://localhost:11434/v1",
-        "model": "phi:2",
+        "model": "phi:latest",
     }
 ]
 
 # Définition de l'agent initiateur avec une configuration vers ollama
-logger.info("Configuration de l'agent initiateur avec ollama")
-logger.info("Base URL: http://localhost:11434")
-logger.info("Model: gemma-2b")
+#logger.info("Configuration de l'agent initiateur avec ollama")
+#logger.info("Base URL: http://localhost:11434/v1")
+#logger.info("Model: gemma-2b")
 
 initiator = autogen.AssistantAgent(
     name="Initiateur",
     llm_config={
         "type": "ollama",
-        "base_url": "http://localhost:11434",
-        "model": "gemma-2b",
+        "base_url": "http://localhost:11434/v1",
+        "model": "gemma:2b",
     }
 )
 
