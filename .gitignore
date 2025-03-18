@@ -4,11 +4,16 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Ignorer les fichiers ZIP
+*.zip
+
 # Environnement virtuel Python
 llm_env/
 venv/
 env/
-
+# Ignorer les fichiers générés par les outils de build
+/build/
+/dist/
 # IDE & éditeurs
 .vscode/
 .idea/
