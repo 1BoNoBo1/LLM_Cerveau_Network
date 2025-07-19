@@ -3,7 +3,7 @@ uvicorn[standard]==0.29.0
 
 chromadb==0.4.24
 openai==1.13.3
-pyautogen==0.2.26
+ag2==0.2.26
 
 python-dotenv==1.0.1
 pydantic==2.6.4
