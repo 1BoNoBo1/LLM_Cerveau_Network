@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-**LLM Cerveau Network** est un système d'IA distribuée où 4 agents LLM spécialisés collaborent comme des "neurones" pour résoudre des problèmes. Orchestré par **CrewAI** avec des modèles locaux via **Ollama**.
+**LLM Cerveau Network** est un système d'IA distribuée où 4 agents LLM spécialisés collaborent comme des "neurones" pour résoudre des problèmes. Orchestré par **CrewAI** avec des modèles locaux via **Ollama**, et doté d'une mémoire persistante via **ChromaDB**.
 
 **Langage :** Français (docs/commentaires), Python (code)
 **Licence :** MIT
@@ -14,17 +14,27 @@ LLM-Cerveau-Network/
 ├── agents/                 # Module des agents spécialisés
 │   ├── __init__.py
 │   ├── config.py          # Configuration des modèles
-│   └── cerveau.py         # Orchestration CrewAI
+│   ├── cerveau.py         # Orchestration CrewAI
+│   └── memory.py          # Mémoire ChromaDB
 ├── api/                    # API REST FastAPI
 │   ├── main.py            # Point d'entrée FastAPI
 │   ├── routers/
-│   │   └── agents.py      # Endpoints /penser, /health
+│   │   └── agents.py      # Endpoints
 │   └── schemas/
 │       └── agent_schema.py # Schémas Pydantic
+├── ui/                     # Interface utilisateur
+│   └── app.py             # Application Streamlit
+├── tests/                  # Tests automatisés
+│   ├── conftest.py        # Fixtures pytest
+│   ├── test_memory.py     # Tests mémoire
+│   ├── test_api.py        # Tests API
+│   └── test_schemas.py    # Tests schémas
+├── data/                   # Base vectorielle (gitignored)
+│   └── chromadb/          # Stockage ChromaDB
 ├── scripts/
-│   └── setup.sh           # Script d'installation
-├── .env.example           # Variables d'environnement
-├── requirements.txt       # Dépendances Python
+│   └── setup.sh
+├── .env.example
+├── requirements.txt
 └── README.md
 ```
 
@@ -44,8 +54,10 @@ LLM-Cerveau-Network/
 | Orchestration | CrewAI |
 | LLMs locaux | Ollama (qwen2.5:3b recommandé) |
 | API | FastAPI + Uvicorn |
+| Mémoire | ChromaDB (base vectorielle) |
+| Interface | Streamlit |
 | Validation | Pydantic |
-| Base vectorielle | ChromaDB (future) |
+| Tests | pytest + httpx |
 
 ## Installation
 
@@ -74,40 +86,59 @@ ollama pull qwen2.5:3b
 cp .env.example .env
 ```
 
-### Lancer l'API
+## Lancer l'Application
+
+### Option 1 : API FastAPI
 ```bash
 source llm_env/bin/activate
 cd api
 uvicorn main:app --reload
 ```
+- API : `http://localhost:8000`
+- Documentation : `http://localhost:8000/docs`
 
-API disponible sur `http://localhost:8000`
-Documentation interactive : `http://localhost:8000/docs`
+### Option 2 : Interface Streamlit
+```bash
+source llm_env/bin/activate
+streamlit run ui/app.py
+```
+- Interface : `http://localhost:8501`
 
-## Utilisation de l'API
+## API Endpoints
 
-### Endpoint principal : POST /api/penser
+### Réflexion
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/penser` | Lance une réflexion (complet/rapide) |
+| GET | `/api/health` | Vérifie l'état du système |
+
+### Mémoire
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/memoire/stats` | Statistiques de la mémoire |
+| GET | `/api/memoire/rechercher?q=...` | Recherche dans l'historique |
+| DELETE | `/api/memoire/effacer?confirmer=true` | Efface la mémoire |
+
+### Exemples d'utilisation
 
 ```bash
 # Mode complet (4 agents)
 curl -X POST http://localhost:8000/api/penser \
   -H "Content-Type: application/json" \
-  -d '{"message": "Comment améliorer la productivité au travail?", "mode": "complet"}'
+  -d '{"message": "Comment améliorer la productivité?", "mode": "complet"}'
 
 # Mode rapide (2 agents)
 curl -X POST http://localhost:8000/api/penser \
   -H "Content-Type: application/json" \
-  -d '{"message": "Quelle est la capitale de la France?", "mode": "rapide"}'
-```
+  -d '{"message": "Capitale de la France?", "mode": "rapide"}'
 
-### Réponse type
-```json
-{
-  "question": "Comment améliorer la productivité au travail?",
-  "synthese": "Réponse synthétisée par les 4 agents...",
-  "succes": true,
-  "mode": "complet"
-}
+# Rechercher dans la mémoire
+curl "http://localhost:8000/api/memoire/rechercher?q=productivité&k=5"
+
+# Stats mémoire
+curl http://localhost:8000/api/memoire/stats
 ```
 
 ## Configuration
@@ -130,13 +161,55 @@ TIMEOUT_AGENT=120
 | RTX 3060 | 12GB | qwen2.5:7b, phi3 |
 | RTX 4090 | 24GB | qwen2.5:14b, deepseek-r1:8b |
 
-## Conventions de Code
+## Tests
 
-### Style Python
-- Type hints avec Pydantic
-- Logging via `logging` module
-- Commentaires en français
-- Patterns FastAPI pour l'API
+```bash
+# Lancer tous les tests
+pytest tests/ -v
+
+# Tests spécifiques
+pytest tests/test_memory.py -v
+pytest tests/test_api.py -v
+pytest tests/test_schemas.py -v
+
+# Avec couverture
+pytest tests/ --cov=agents --cov=api
+```
+
+## Fonctionnalités
+
+### Mémoire Persistante (ChromaDB)
+- Sauvegarde automatique des conversations
+- Recherche sémantique dans l'historique
+- Contexte des conversations passées fourni aux agents
+- Stockage dans `data/chromadb/`
+
+### Interface Streamlit
+- Mode complet ou rapide
+- Historique de session
+- Recherche dans la mémoire
+- Affichage des statistiques
+
+### Modes de Réflexion
+
+| Mode | Agents | Temps estimé | Usage |
+|------|--------|--------------|-------|
+| `complet` | 4 agents | ~2 min | Problèmes complexes |
+| `rapide` | 2 agents | ~30 sec | Questions simples |
+
+## Développement
+
+### Modifier le comportement des agents
+Éditer `agents/cerveau.py` :
+- `_creer_initiateur()` : Personnalité de l'Initiateur
+- `_creer_creatif()` : Style créatif
+- `_creer_critique()` : Critères d'analyse
+- `_creer_synthetiseur()` : Méthode de synthèse
+
+### Ajouter un endpoint
+1. Ajouter le schéma dans `api/schemas/agent_schema.py`
+2. Ajouter la route dans `api/routers/agents.py`
+3. Ajouter les tests dans `tests/test_api.py`
 
 ### Structure des imports
 ```python
@@ -146,57 +219,34 @@ from routers.agents import router as agent_router
 # Dans api/routers/agents.py
 from schemas.agent_schema import AgentRequest, AgentResponse
 from agents.cerveau import get_cerveau
+from agents.memory import get_memoire
 ```
-
-## Tests
-
-```bash
-# Lancer les tests
-pytest tests/
-
-# Test manuel de l'API
-curl http://localhost:8000/api/health
-```
-
-## Développement
-
-### Modifier le comportement des agents
-
-Éditer `agents/cerveau.py` :
-- `_creer_initiateur()` : Personnalité de l'agent Initiateur
-- `_creer_creatif()` : Style créatif
-- `_creer_critique()` : Critères d'analyse
-- `_creer_synthetiseur()` : Méthode de synthèse
-
-### Ajouter un nouvel endpoint
-
-1. Ajouter le schéma dans `api/schemas/agent_schema.py`
-2. Ajouter la route dans `api/routers/agents.py`
-3. Documenter dans ce fichier
 
 ## Sécurité
 
 - Ne jamais commiter `.env`
 - Ne pas exposer l'API sur internet sans authentification
 - Les modèles restent locaux (Ollama)
+- Le dossier `data/` est gitignored
 
 ## Dépannage
 
 ### Ollama ne répond pas
 ```bash
-# Vérifier qu'Ollama est lancé
-ollama list
-
-# Relancer si nécessaire
-ollama serve
+ollama list      # Vérifier les modèles
+ollama serve     # Relancer si nécessaire
 ```
 
 ### Modèle non trouvé
 ```bash
-# Télécharger le modèle
 ollama pull qwen2.5:3b
 ```
 
 ### Mémoire GPU insuffisante
 - Utiliser des modèles plus petits (gemma:2b)
 - Ou configurer un seul modèle pour tous les agents
+
+### Erreur ChromaDB
+```bash
+rm -rf data/chromadb  # Reset la base (perte des données)
+```

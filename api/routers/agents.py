@@ -5,7 +5,8 @@ import sys
 import os
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
 
 # Ajouter le répertoire parent au path pour importer agents
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -17,6 +18,7 @@ from schemas.agent_schema import (
     ModeReflexion,
 )
 from agents.cerveau import get_cerveau
+from agents.memory import get_memoire
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -76,6 +78,68 @@ async def penser(request: AgentRequest):
             status_code=500,
             detail=f"Erreur lors de la réflexion: {str(e)}",
         )
+
+
+@router.get("/memoire/stats")
+async def stats_memoire():
+    """
+    Retourne les statistiques de la mémoire du cerveau.
+
+    - Nombre de conversations stockées
+    - Nombre de contextes permanents
+    """
+    try:
+        memoire = get_memoire()
+        return memoire.stats()
+    except Exception as e:
+        logger.error(f"Erreur stats mémoire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memoire/rechercher")
+async def rechercher_memoire(
+    q: str = Query(..., description="Texte de recherche"),
+    k: int = Query(5, ge=1, le=20, description="Nombre de résultats"),
+    mode: Optional[str] = Query(None, description="Filtrer par mode (complet/rapide)")
+):
+    """
+    Recherche dans la mémoire des conversations passées.
+
+    - **q** : Texte de recherche
+    - **k** : Nombre de résultats (1-20)
+    - **mode** : Filtrer par mode de réflexion
+    """
+    try:
+        memoire = get_memoire()
+        resultats = memoire.rechercher(q, k=k, filtre_mode=mode)
+        return {"resultats": resultats, "total": len(resultats)}
+    except Exception as e:
+        logger.error(f"Erreur recherche mémoire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/memoire/effacer")
+async def effacer_memoire(confirmer: bool = Query(False, description="Confirmer l'effacement")):
+    """
+    Efface toute la mémoire du cerveau.
+
+    **ATTENTION** : Cette action est irréversible !
+
+    - **confirmer** : Doit être True pour confirmer l'effacement
+    """
+    if not confirmer:
+        raise HTTPException(
+            status_code=400,
+            detail="Ajoutez ?confirmer=true pour confirmer l'effacement"
+        )
+
+    try:
+        memoire = get_memoire()
+        memoire.effacer(confirmer=True)
+        return {"message": "Mémoire effacée avec succès"}
+    except Exception as e:
+        logger.error(f"Erreur effacement mémoire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Garder l'ancien endpoint pour compatibilité

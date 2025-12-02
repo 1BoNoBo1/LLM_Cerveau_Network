@@ -2,9 +2,11 @@
 # Cerveau Network - Orchestration des agents spécialisés avec CrewAI
 
 import logging
+from typing import Optional
 from crewai import Agent, Task, Crew, Process, LLM
 
 from .config import MODELES, OLLAMA_BASE_URL
+from .memory import MemoireCerveau, get_memoire
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,9 +21,23 @@ class CerveauNetwork:
     - Synthétiseur : Fusionne les meilleures réponses
     """
 
-    def __init__(self):
-        """Initialise les agents du cerveau."""
+    def __init__(self, utiliser_memoire: bool = True):
+        """
+        Initialise les agents du cerveau.
+
+        Args:
+            utiliser_memoire: Active la mémoire ChromaDB pour le contexte
+        """
         logger.info("Initialisation du Cerveau Network...")
+
+        # Mémoire optionnelle
+        self.memoire: Optional[MemoireCerveau] = None
+        if utiliser_memoire:
+            try:
+                self.memoire = get_memoire()
+                logger.info("Mémoire ChromaDB activée")
+            except Exception as e:
+                logger.warning(f"Mémoire non disponible: {e}")
 
         # Créer les LLMs pour chaque agent
         self.llm_initiateur = self._creer_llm(MODELES["initiateur"])
@@ -100,23 +116,50 @@ class CerveauNetwork:
             allow_delegation=False,
         )
 
-    def penser(self, question: str) -> dict:
+    def _obtenir_contexte(self, question: str) -> str:
+        """Récupère le contexte pertinent de la mémoire."""
+        if not self.memoire:
+            return ""
+
+        try:
+            return self.memoire.obtenir_contexte(question, k=3)
+        except Exception as e:
+            logger.warning(f"Erreur récupération contexte: {e}")
+            return ""
+
+    def _sauvegarder_conversation(self, question: str, reponse: str, mode: str):
+        """Sauvegarde la conversation dans la mémoire."""
+        if not self.memoire:
+            return
+
+        try:
+            self.memoire.sauvegarder(question, reponse, mode)
+        except Exception as e:
+            logger.warning(f"Erreur sauvegarde mémoire: {e}")
+
+    def penser(self, question: str, sauvegarder: bool = True) -> dict:
         """
         Lance le processus de réflexion collaborative sur une question.
 
         Args:
             question: La question ou le problème à analyser
+            sauvegarder: Sauvegarder dans la mémoire (défaut: True)
 
         Returns:
             dict avec les contributions de chaque agent et la synthèse finale
         """
         logger.info(f"Nouvelle réflexion sur : {question[:50]}...")
 
+        # Récupérer le contexte des conversations passées
+        contexte = self._obtenir_contexte(question)
+        contexte_str = f"\n\n{contexte}" if contexte else ""
+
         # Définir les tâches pour chaque agent
         tache_initiale = Task(
             description=f"""Analyse cette question et fournis une réflexion initiale structurée :
 
             Question : {question}
+            {contexte_str}
 
             Tu dois :
             1. Identifier les éléments clés de la question
@@ -165,38 +208,50 @@ class CerveauNetwork:
         crew = Crew(
             agents=[self.initiateur, self.creatif, self.critique, self.synthetiseur],
             tasks=[tache_initiale, tache_creative, tache_critique, tache_synthese],
-            process=Process.sequential,  # Exécution séquentielle
+            process=Process.sequential,
             verbose=True,
         )
 
         # Exécuter la réflexion
         resultat = crew.kickoff()
+        synthese = str(resultat)
+
+        # Sauvegarder dans la mémoire
+        if sauvegarder:
+            self._sauvegarder_conversation(question, synthese, "complet")
 
         logger.info("Réflexion terminée avec succès")
 
         return {
             "question": question,
-            "synthese": str(resultat),
+            "synthese": synthese,
             "succes": True,
+            "contexte_utilise": bool(contexte),
         }
 
-    def penser_rapide(self, question: str) -> dict:
+    def penser_rapide(self, question: str, sauvegarder: bool = True) -> dict:
         """
         Version simplifiée avec seulement Initiateur + Synthétiseur.
         Plus rapide mais moins approfondie.
 
         Args:
             question: La question à analyser
+            sauvegarder: Sauvegarder dans la mémoire (défaut: True)
 
         Returns:
             dict avec la réponse
         """
         logger.info(f"Réflexion rapide sur : {question[:50]}...")
 
+        # Récupérer le contexte
+        contexte = self._obtenir_contexte(question)
+        contexte_str = f"\n\nContexte des conversations passées:\n{contexte}" if contexte else ""
+
         tache_initiale = Task(
             description=f"""Analyse cette question et fournis une réponse structurée :
 
-            Question : {question}""",
+            Question : {question}
+            {contexte_str}""",
             expected_output="Analyse et réponse structurée",
             agent=self.initiateur,
         )
@@ -215,12 +270,27 @@ class CerveauNetwork:
         )
 
         resultat = crew.kickoff()
+        synthese = str(resultat)
+
+        # Sauvegarder dans la mémoire
+        if sauvegarder:
+            self._sauvegarder_conversation(question, synthese, "rapide")
 
         return {
             "question": question,
-            "synthese": str(resultat),
+            "synthese": synthese,
             "succes": True,
+            "contexte_utilise": bool(contexte),
         }
+
+    def stats_memoire(self) -> dict:
+        """Retourne les statistiques de la mémoire."""
+        if not self.memoire:
+            return {"memoire_active": False}
+
+        stats = self.memoire.stats()
+        stats["memoire_active"] = True
+        return stats
 
 
 # Instance globale pour réutilisation
