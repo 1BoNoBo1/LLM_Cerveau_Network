@@ -1,17 +1,28 @@
-fastapi==0.110.0
-uvicorn[standard]==0.29.0
+# API Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
 
-chromadb==0.4.24
-openai==1.13.3
-pyautogen==0.2.26
+# Orchestration Multi-Agents
+crewai>=0.86.0
+crewai-tools>=0.14.0
 
-python-dotenv==1.0.1
-pydantic==2.6.4
-PyYAML==6.0.1
+# Base vectorielle (mémoire des agents)
+chromadb>=0.5.0
 
-numpy==1.26.4
-pandas==2.2.1
+# LLM & Validation
+openai>=1.50.0
+pydantic>=2.9.0
+python-dotenv>=1.0.1
+PyYAML>=6.0.2
 
-streamlit==1.32.2  # facultatif, mais recommandé pour intégration future
-httpx==0.27.0        # pour tests unitaires FastAPI
-pytest==8.1.1
+# Utilitaires
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Interface utilisateur (optionnel)
+streamlit>=1.40.0
+
+# Tests
+httpx>=0.27.0
+pytest>=8.3.0
+pytest-asyncio>=0.24.0

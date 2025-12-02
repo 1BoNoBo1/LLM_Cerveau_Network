@@ -1,213 +1,202 @@
-# CLAUDE.md - AI Assistant Guide for LLM Cerveau Network
+# CLAUDE.md - Guide pour LLM Cerveau Network
 
-## Project Overview
+## Vue d'ensemble
 
-**LLM Cerveau Network** is an experimental distributed artificial intelligence system where multiple quantized LLM models act as specialized "neurons" that communicate and reason together. The project orchestrates agent interactions via AutoGen and runs local models through Ollama, optimized for modest hardware (GTX 1650 4GB).
+**LLM Cerveau Network** est un système d'IA distribuée où 4 agents LLM spécialisés collaborent comme des "neurones" pour résoudre des problèmes. Orchestré par **CrewAI** avec des modèles locaux via **Ollama**.
 
-**Primary Language:** French (documentation and comments), Python (code)
-**License:** MIT
+**Langage :** Français (docs/commentaires), Python (code)
+**Licence :** MIT
 
 ## Architecture
 
 ```
 LLM-Cerveau-Network/
-├── api/                    # FastAPI REST API
-│   ├── main.py            # FastAPI app entry point
+├── agents/                 # Module des agents spécialisés
+│   ├── __init__.py
+│   ├── config.py          # Configuration des modèles
+│   └── cerveau.py         # Orchestration CrewAI
+├── api/                    # API REST FastAPI
+│   ├── main.py            # Point d'entrée FastAPI
 │   ├── routers/
-│   │   └── agents.py      # Agent interaction endpoints
+│   │   └── agents.py      # Endpoints /penser, /health
 │   └── schemas/
-│       └── agent_schema.py # Pydantic request/response models
+│       └── agent_schema.py # Schémas Pydantic
 ├── scripts/
-│   └── setup.sh           # Interactive setup script (Bash)
-├── requirements.txt        # Python dependencies
-├── .gitignore
-├── LICENSE
+│   └── setup.sh           # Script d'installation
+├── .env.example           # Variables d'environnement
+├── requirements.txt       # Dépendances Python
 └── README.md
 ```
 
-### Planned Directories (not yet created)
-- `agents/` - Specialized agent definitions
-- `docker/` - Docker and Docker Compose files
-- `models/` - Local LLM model storage (gitignored)
-- `data/` - ChromaDB vector database (gitignored)
-- `tests/` - Unit tests with pytest
+## Les 4 Agents
 
-## Tech Stack
+| Agent | Rôle | Description |
+|-------|------|-------------|
+| **Initiateur** | Analyse | Décompose le problème, lance la réflexion |
+| **Créatif** | Idéation | Propose des idées originales et innovantes |
+| **Critique** | Évaluation | Analyse forces/faiblesses, suggère améliorations |
+| **Synthétiseur** | Fusion | Crée une réponse finale cohérente |
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Orchestration | AutoGen (pyautogen) | Multi-agent coordination |
-| Local LLMs | Ollama | Run quantized models (GGUF 4-bit) |
-| API | FastAPI + Uvicorn | REST API server |
-| Vector DB | ChromaDB | Memory/embeddings storage |
-| Validation | Pydantic | Request/response schemas |
-| Future UI | Streamlit | User interface |
-| Testing | pytest + httpx | Unit and integration tests |
-| Container | Docker + Docker Compose | Deployment |
+## Stack Technique
 
-## Agent Roles
+| Composant | Technologie |
+|-----------|-------------|
+| Orchestration | CrewAI |
+| LLMs locaux | Ollama (qwen2.5:3b recommandé) |
+| API | FastAPI + Uvicorn |
+| Validation | Pydantic |
+| Base vectorielle | ChromaDB (future) |
 
-| Agent | Role | Recommended Model |
-|-------|------|-------------------|
-| **Initiateur** | Launches initial reasoning | gemma:2b |
-| **Créatif** | Generates original ideas | phi:latest |
-| **Critique** | Analyzes and critiques responses | phi:latest |
-| **Synthétiseur** | Merges best responses | gemma:2b |
+## Installation
 
-## Development Setup
+### Prérequis
+- Python 3.10+
+- Ollama installé et lancé
+- GPU recommandé (GTX 1650 4GB minimum)
 
-### Prerequisites
-- Python 3.x
-- pip3
-- python3-venv
-- git
-- Docker + Docker Compose
-- Ollama
-
-### Quick Setup
+### Installation rapide
 ```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
-```
+# Cloner et entrer dans le projet
+git clone https://github.com/1BoNoBo1/LLM_Cerveau_Network.git
+cd LLM_Cerveau_Network
 
-The setup script will:
-1. Verify and install system prerequisites
-2. Install Ollama and download models (gemma:2b, phi)
-3. Create a Python virtual environment at `../llm_env`
-4. Install Python dependencies from requirements.txt
-
-### Manual Setup
-```bash
-# Create and activate virtual environment
+# Créer l'environnement virtuel
 python3 -m venv llm_env
 source llm_env/bin/activate
 
-# Install dependencies
+# Installer les dépendances
 pip install -r requirements.txt
 
-# Ensure Ollama is running with required models
-ollama pull gemma:2b
-ollama pull phi
+# Télécharger le modèle recommandé
+ollama pull qwen2.5:3b
+
+# Copier et configurer l'environnement
+cp .env.example .env
 ```
 
-### Running the API
+### Lancer l'API
 ```bash
 source llm_env/bin/activate
 cd api
 uvicorn main:app --reload
 ```
 
-API will be available at `http://localhost:8000`
+API disponible sur `http://localhost:8000`
+Documentation interactive : `http://localhost:8000/docs`
 
-## API Endpoints
+## Utilisation de l'API
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/run_agent` | Send a message to the initiator agent |
-
-### Request/Response Format
-```python
-# Request (AgentRequest)
-{"message": "Your question here"}
-
-# Response (AgentResponse)
-{"response": "Agent's reply"}
-```
-
-## Code Conventions
-
-### Python Style
-- Use type hints with Pydantic for API schemas
-- Logging via Python's `logging` module
-- French comments and documentation preferred
-- Follow FastAPI patterns for routing and dependency injection
-
-### File Organization
-- Routers in `api/routers/` with `router = APIRouter()`
-- Schemas in `api/schemas/` using Pydantic BaseModel
-- Entry point includes routers with prefix (`/api`)
-
-### Imports Pattern
-```python
-# In main.py - relative imports from routers
-from routers.agents import router as agent_router
-
-# In routers - relative imports from schemas
-from schemas.agent_schema import AgentRequest, AgentResponse
-```
-
-## Security Guidelines
-
-- Never commit `.env` files or API keys
-- Never expose LLM models directly to the internet
-- Keep sensitive data out of version control
-- Models, data, and environment files are gitignored
-
-## Git Workflow
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make changes and commit with clear messages
-4. Submit a Pull Request with documentation
-
-### Gitignored Items
-- Python cache (`__pycache__/`, `*.pyc`)
-- Virtual environments (`llm_env/`, `venv/`, `env/`)
-- IDE configs (`.vscode/`, `.idea/`)
-- LLM models (`*.gguf`, `*.bin`, `*.pth`, `.ollama/`)
-- Data directory (`data/`)
-- Environment files (`*.env`)
-- Build artifacts and logs
-
-## Testing
+### Endpoint principal : POST /api/penser
 
 ```bash
-# Run tests (when test files exist)
-pytest tests/
+# Mode complet (4 agents)
+curl -X POST http://localhost:8000/api/penser \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Comment améliorer la productivité au travail?", "mode": "complet"}'
+
+# Mode rapide (2 agents)
+curl -X POST http://localhost:8000/api/penser \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Quelle est la capitale de la France?", "mode": "rapide"}'
 ```
 
-Testing tools available: pytest, httpx (for FastAPI testing)
+### Réponse type
+```json
+{
+  "question": "Comment améliorer la productivité au travail?",
+  "synthese": "Réponse synthétisée par les 4 agents...",
+  "succes": true,
+  "mode": "complet"
+}
+```
 
-## Common Tasks for AI Assistants
+## Configuration
 
-### Adding a New Agent
-1. Add agent configuration in `api/routers/agents.py`
-2. Use AutoGen's `AssistantAgent` with Ollama config
-3. Configure with appropriate model from Ollama
+### Variables d'environnement (.env)
+```bash
+OLLAMA_BASE_URL=http://localhost:11434
+MODEL_INITIATEUR=qwen2.5:3b
+MODEL_CREATIF=qwen2.5:3b
+MODEL_CRITIQUE=qwen2.5:3b
+MODEL_SYNTHETISEUR=qwen2.5:3b
+TIMEOUT_AGENT=120
+```
 
-### Adding a New Endpoint
-1. Add route in appropriate router (`api/routers/`)
-2. Define request/response schemas in `api/schemas/`
-3. Follow existing patterns for error handling and logging
+### Modèles recommandés par GPU
 
-### Modifying Agent Behavior
-- Agent configs use Ollama's OpenAI-compatible API at `http://localhost:11434/v1`
-- Models specified as `model_name:version` (e.g., `gemma:2b`, `phi:latest`)
+| GPU | VRAM | Modèle recommandé |
+|-----|------|-------------------|
+| GTX 1650 | 4GB | qwen2.5:3b, gemma:2b |
+| RTX 3060 | 12GB | qwen2.5:7b, phi3 |
+| RTX 4090 | 24GB | qwen2.5:14b, deepseek-r1:8b |
 
-## Hardware Requirements (Minimum)
+## Conventions de Code
 
-- CPU: Ryzen 5 or equivalent
-- GPU: NVIDIA GTX 1650 4GB+
-- RAM: 16 GB (24 GB+ recommended)
-- Storage: 512 GB SSD
+### Style Python
+- Type hints avec Pydantic
+- Logging via `logging` module
+- Commentaires en français
+- Patterns FastAPI pour l'API
 
-## Current Project Status
+### Structure des imports
+```python
+# Dans api/main.py
+from routers.agents import router as agent_router
 
-This is an **early-stage experimental project**. Currently implemented:
-- Basic FastAPI structure with one endpoint
-- Single initiator agent connected to Ollama
-- Setup script for environment configuration
+# Dans api/routers/agents.py
+from schemas.agent_schema import AgentRequest, AgentResponse
+from agents.cerveau import get_cerveau
+```
 
-Planned features:
-- Multi-agent interaction with all 4 agent types
-- ChromaDB integration for vector memory
-- Streamlit UI
-- Docker deployment
-- Cloud scaling support (RunPod, RTX 4090, A100)
+## Tests
 
-## Notes for Development
+```bash
+# Lancer les tests
+pytest tests/
 
-- The project uses Ollama's OpenAI-compatible endpoint (port 11434)
-- Agent interactions have a 2-minute time limit (configurable)
-- Exchanges use JSON format
-- Virtual environment is created outside the project directory (`../llm_env`)
+# Test manuel de l'API
+curl http://localhost:8000/api/health
+```
+
+## Développement
+
+### Modifier le comportement des agents
+
+Éditer `agents/cerveau.py` :
+- `_creer_initiateur()` : Personnalité de l'agent Initiateur
+- `_creer_creatif()` : Style créatif
+- `_creer_critique()` : Critères d'analyse
+- `_creer_synthetiseur()` : Méthode de synthèse
+
+### Ajouter un nouvel endpoint
+
+1. Ajouter le schéma dans `api/schemas/agent_schema.py`
+2. Ajouter la route dans `api/routers/agents.py`
+3. Documenter dans ce fichier
+
+## Sécurité
+
+- Ne jamais commiter `.env`
+- Ne pas exposer l'API sur internet sans authentification
+- Les modèles restent locaux (Ollama)
+
+## Dépannage
+
+### Ollama ne répond pas
+```bash
+# Vérifier qu'Ollama est lancé
+ollama list
+
+# Relancer si nécessaire
+ollama serve
+```
+
+### Modèle non trouvé
+```bash
+# Télécharger le modèle
+ollama pull qwen2.5:3b
+```
+
+### Mémoire GPU insuffisante
+- Utiliser des modèles plus petits (gemma:2b)
+- Ou configurer un seul modèle pour tous les agents

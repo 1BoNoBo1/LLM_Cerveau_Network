@@ -1,55 +1,88 @@
-#agents.py
+# api/routers/agents.py
+# Endpoints pour interagir avec le Cerveau Network
 
-from fastapi import APIRouter, HTTPException
-from schemas.agent_schema import AgentRequest, AgentResponse
-
-import autogen
+import sys
+import os
 import logging
 
-# Configuration du logging pour voir les messages de debug
+from fastapi import APIRouter, HTTPException
+
+# Ajouter le répertoire parent au path pour importer agents
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from schemas.agent_schema import (
+    AgentRequest,
+    AgentResponse,
+    HealthResponse,
+    ModeReflexion,
+)
+from agents.cerveau import get_cerveau
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Exemple de configuration pour illustrer plusieurs agents (vous pouvez l'adapter selon vos besoins)
-config_list = [
-    {
-        "base_url": "http://localhost:11434/v1",
-        "model": "gemma:2b",
-    },
-    {
-        "base_url": "http://localhost:11434/v1",
-        "model": "phi:latest",
-    }
-]
 
-# Définition de l'agent initiateur avec une configuration vers ollama
-#logger.info("Configuration de l'agent initiateur avec ollama")
-#logger.info("Base URL: http://localhost:11434/v1")
-#logger.info("Model: gemma-2b")
+@router.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Vérifie l'état du Cerveau Network."""
+    try:
+        cerveau = get_cerveau()
+        return HealthResponse(
+            status="ok",
+            message="Cerveau Network opérationnel",
+            agents_disponibles=["Initiateur", "Créatif", "Critique", "Synthétiseur"],
+        )
+    except Exception as e:
+        logger.error(f"Erreur health check: {e}")
+        return HealthResponse(
+            status="error",
+            message=str(e),
+            agents_disponibles=[],
+        )
 
-initiator = autogen.AssistantAgent(
-    name="Initiateur",
-    llm_config={
-        "type": "ollama",
-        "base_url": "http://localhost:11434/v1",
-        "model": "gemma:2b",
-    }
-)
 
-logger.info(f"Agent initiateur configuré: {initiator.llm_config}")
+@router.post("/penser", response_model=AgentResponse)
+async def penser(request: AgentRequest):
+    """
+    Lance une réflexion collaborative du Cerveau Network.
 
-@router.post("/run_agent", response_model=AgentResponse)
-async def run_agent(request: AgentRequest):
-    user_message = request.message
+    - **message** : La question ou le problème à analyser
+    - **mode** : 'complet' (4 agents) ou 'rapide' (2 agents)
+
+    Retourne la synthèse de la réflexion collective.
+    """
+    logger.info(f"Nouvelle requête reçue - Mode: {request.mode.value}")
 
     try:
-        response = initiator.generate_reply(
-            messages=[{"role": "user", "content": user_message}]
+        cerveau = get_cerveau()
+
+        if request.mode == ModeReflexion.RAPIDE:
+            resultat = cerveau.penser_rapide(request.message)
+        else:
+            resultat = cerveau.penser(request.message)
+
+        return AgentResponse(
+            question=resultat["question"],
+            synthese=resultat["synthese"],
+            succes=resultat["succes"],
+            mode=request.mode.value,
         )
-        logger.info(f"Réponse générée avec succès pour le message: {user_message}")
-        return {"response": response}
+
     except Exception as e:
-        logger.error(f"Erreur lors de la génération de la réponse pour le message: {user_message}. Erreur: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        logger.error(f"Erreur lors de la réflexion: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la réflexion: {str(e)}",
+        )
+
+
+# Garder l'ancien endpoint pour compatibilité
+@router.post("/run_agent", response_model=AgentResponse)
+async def run_agent(request: AgentRequest):
+    """
+    [DEPRECATED] Utilisez /penser à la place.
+    Cet endpoint est maintenu pour compatibilité.
+    """
+    return await penser(request)
